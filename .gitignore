@@ -87,9 +87,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
-<<<<<<< HEAD
 
 env
 auth.cfg
-=======
->>>>>>> cb72a36529c5cec42494e87ac6e6b9bd9aad76ee
