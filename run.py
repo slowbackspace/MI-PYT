@@ -25,10 +25,10 @@ def get_repo(repo):
 	return repo_owner, repo_name
 
 def get_interval(interval):
-    return interval
+	return interval
 
 def get_fallback_label(label):
-    return label
+	return label
 
 def load_rules(rules):
 	with open(rules) as f:
