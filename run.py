@@ -34,7 +34,7 @@ def load_rules(rules):
     with open(rules) as f:
         rules = []
         for line in f:
-            rule, label = line.strip().split(" ")
+            rule, label = line.strip().rsplit(" ", 1) # http://stackoverflow.com/questions/15012228/splitting-on-last-delimiter-in-python-string
             rules.append({"pattern": rule, "label": label})
     return rules
 
