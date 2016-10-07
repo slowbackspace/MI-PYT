@@ -80,7 +80,7 @@ def add_labels(session, repo, issue, labels):
 @click.command()
 @click.option('--config', default='auth.cfg', help='Configuration file. Default auth.cfg')
 @click.option('--repo', default='slowbackspace/testrepo', help='Repository in \'owner/name\' format. Default slowbackspace/testrepo')
-@click.option('--scope', default='issue_body', help='Scope - issue_body, issue_comments, pull_requests, all. Default issue_body.', multiple=True)
+@click.option('--scope', default='all', help='Scope - issue_body, issue_comments, pull_requests, all. Default issue_body.', multiple=True)
 @click.option('--rules', default='rules.yml', help='Configuration of rules')
 @click.option('--interval', default=5, help='Interval [seconds]. Default 5')
 @click.option('--label', default='wontfix', help='Fallback label. Default wonfix.')
