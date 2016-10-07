@@ -1,0 +1,6 @@
+- pattern: .*robot:bug.*
+  label: bug
+- pattern: .*robot:question.*
+  label: question
+- pattern: .*robot:duplicate.*
+  label: duplicate

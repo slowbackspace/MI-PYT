@@ -1,3 +1,0 @@
-.*robot:bug.* bug
-.*robot:question.* question
-.*robot:duplicate.* duplicate

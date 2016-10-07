@@ -3,6 +3,7 @@ import configparser
 import time
 import json
 import re
+import yaml
 
 import requests
 
@@ -31,12 +32,8 @@ def get_fallback_label(label):
     return label
 
 def load_rules(rules):
-    with open(rules) as f:
-        rules = []
-        for line in f:
-            rule, label = line.strip().rsplit(" ", 1) # http://stackoverflow.com/questions/15012228/splitting-on-last-delimiter-in-python-string
-            rules.append({"pattern": rule, "label": label})
-    return rules
+    rules = yaml.safe_load(open( rules ))
+    return rules or []
 
 def get_scope(scope):
     if scope == "all":
@@ -84,7 +81,7 @@ def add_labels(session, repo, issue, labels):
 @click.option('--config', default='auth.cfg', help='Configuration file. Default auth.cfg')
 @click.option('--repo', default='slowbackspace/testrepo', help='Repository in \'owner/name\' format. Default slowbackspace/testrepo')
 @click.option('--scope', default='issue_body', help='Scope - issue_body, issue_comments, pull_requests, all. Default issue_body.', multiple=True)
-@click.option('--rules', default='rules.txt', help='Configuration of rules')
+@click.option('--rules', default='rules.yml', help='Configuration of rules')
 @click.option('--interval', default=5, help='Interval [seconds]. Default 5')
 @click.option('--label', default='wontfix', help='Fallback label. Default wonfix.')
 def main(config, repo, scope, rules, interval, label):
