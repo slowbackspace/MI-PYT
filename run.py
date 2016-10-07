@@ -32,8 +32,9 @@ def get_fallback_label(label):
     return label
 
 def load_rules(rules):
-    rules = yaml.safe_load(open( rules ))
-    return rules or []
+    with open(rules) as f:
+        rules = yaml.safe_load(f)
+        return rules or []
 
 def get_scope(scope):
     if "all" in scope:
