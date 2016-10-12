@@ -8,10 +8,10 @@ import re
 import yaml
 
 import requests
-import flask
+
 import click
 
-from flask import Flask
+from flask import Flask, request, abort
 
 CONFIG = {}
 app = Flask(__name__)
@@ -87,10 +87,16 @@ def add_labels(session, repo, issue, labels):
     r.raise_for_status
     return r.json()
 
-@app.route('/hook', methods=['POST'])
+@app.route('/')
+def hello_world():
+    return 'Hello World! I am running on port ' + int(os.getenv("PORT"))
+
+@app.route('/hook', methods=['POST', "GET"])
 def hook():
-    scope, rules, label = CONFIG["scope"], CONFIG["rules"], CONFIG["label"]
+    scope, rules, label = CONFIG["scope"], CONFIG["rules"], CONFIG["fallback_label"]
     data = request.get_json()
+    if not data:
+        abort(501)
     issue = data.get("issue", None) or data.get("pull_request", None)
     if issue is None:
         return "Invalid requests", 200
