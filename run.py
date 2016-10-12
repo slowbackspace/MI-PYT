@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import configparser
 import time
 import json
@@ -6,16 +8,20 @@ import re
 import yaml
 
 import requests
-
+import flask
 import click
 
+from flask import Flask
+
+CONFIG = {}
+app = Flask(__name__)
 
 def get_session(token):
     session = requests.Session()
     session.headers = {'Authorization': 'token ' + token, 'User-Agent': 'testapp'}
     return session
 
-def load_config(file):
+def load_authconfig(file):
     config = configparser.ConfigParser()
     if len(config.read(file)) == 0:
         raise IOError("Could not read config file.")
@@ -38,7 +44,7 @@ def load_rules(rules):
 
 def get_scope(scope):
     if "all" in scope:
-        scope = ["issue_body", "issue_comments, pull_requests"]
+        scope = ["issue_body", "issue_comments", "pull_requests"]
 
     return scope
 
@@ -54,15 +60,18 @@ def fetch_comments(session, repo, issue):
     r.raise_for_status
     return r.json()
 
-def check_rules(rules, text):
+def check_rules(rules, text, current_labels=[]):
     labels = set()
+    match = False
     for rule in rules:
         #print("Matching pattern {}".format(rule["pattern"]))
         result = re.search(rule["pattern"], text)
         if result != None:
             #print("Match!")
-            labels.add(rule["label"])
-    return labels
+            match = True
+            if rule["label"] not in current_labels:
+                labels.add(rule["label"])
+    return match, labels
 
 def add_labels(session, repo, issue, labels):
     if len(labels) == 0:
@@ -78,23 +87,71 @@ def add_labels(session, repo, issue, labels):
     r.raise_for_status
     return r.json()
 
-@click.command()
-@click.option('--config', default='auth.cfg', help='Configuration file. Default auth.cfg')
+@app.route('/hook', methods=['POST'])
+def hook():
+    scope, rules, label = CONFIG["scope"], CONFIG["rules"], CONFIG["label"]
+    data = request.get_json()
+    issue = data.get("issue", None) or data.get("pull_request", None)
+    if issue is None:
+        return "Invalid requests", 200
+
+    repo_owner, repo_name = issue.get("repository", {}).get("full_name")
+    comment = issue.get("comment", None)
+    current_labels = issue.get("labels")
+    labels = set()
+    no_rule_matched = True
+
+    # skip PR if they aren't in the scope
+    if issue.get("pull_request", None) and "pull_requests" not in scope:
+        return "PR not in scope", 200
+
+    # aply rules to issues's body if it's in the scope
+    if "issue_body" in scope:
+        match, missing_labels = check_rules(rules, issue["body"], current_labels)
+        [labels.add(label) for label in missing_labels]
+        no_rule_matched = no_rule_matched or match
+
+    # check comments if needed
+    if "issue_comments" in scope and comment is not None:
+        match, missing_labels = check_rules(rules, comment["body"], current_labels)
+        [labels.add(label) for label in missing_labels]
+        no_rule_matched = no_rule_matched or match
+
+    # fallback label
+    if no_rule_matched:
+        if fallback_label not in current_labels:
+            labels.add(fallback_label)
+
+    add_labels(session, (repo_owner, repo_name), issue["number"], labels)
+    return "Added labels: {}".format(labels), 200
+
+@click.group()
+@click.option('--authconfig', default='auth.cfg', help='Configuration file. Default auth.cfg')
 @click.option('--repo', default='slowbackspace/testrepo', help='Repository in \'owner/name\' format. Default slowbackspace/testrepo')
 @click.option('--scope', default=["all"], help='Scope - issue_body, issue_comments, pull_requests, all. Default all.', multiple=True)
 @click.option('--rules', default='rules.yml', help='Configuration of rules')
 @click.option('--interval', default=5, help='Interval [seconds]. Default 5')
 @click.option('--label', default='wontfix', help='Fallback label. Default wonfix.')
-def main(config, repo, scope, rules, interval, label):
-    cfg = load_config(config)
-    token = cfg['github']['token']
-    repo_owner, repo_name = get_repo(repo)
-    rules = load_rules(rules)
-    interval = get_interval(interval)
-    fallback_label = get_fallback_label(label)
-    scope = get_scope(scope)
+def cli(authconfig, repo, scope, rules, interval, label):
+    auth_cfg = load_authconfig(authconfig)
+    token = auth_cfg['github']['token']
+    CONFIG.update({
+        "token": token,
+        "repo_owner": get_repo(repo)[0],
+        "repo_name": get_repo(repo)[1],
+        "rules": load_rules(rules),
+        "interval": get_interval(interval),
+        "fallback_label": get_fallback_label(label),
+        "scope": get_scope(scope),
+        "session": get_session(token)
+        })
 
-    session = get_session(token)
+@cli.command()
+def console():
+    """Run the cli app"""
+    session = CONFIG["session"]
+    scope, rules, interval, fallback_label = CONFIG["scope"], CONFIG["rules"], CONFIG["interval"], CONFIG["fallback_label"]
+    repo_owner, repo_name = CONFIG["repo_owner"], CONFIG["repo_name"]
 
     while True:
         # fetch issues
@@ -114,19 +171,17 @@ def main(config, repo, scope, rules, interval, label):
 
             # aply rules to issues's body if it's in the scope
             if "issue_body" in scope:
-                for label in check_rules(rules, issue["body"]):
-                    no_rule_matched = False
-                    if label not in current_labels:
-                        labels.add(label)
+                match, missing_labels = check_rules(rules, issue["body"], current_labels)
+                [labels.add(label) for label in missing_labels]
+                no_rule_matched = no_rule_matched or match
 
             # check comments if needed
             if "issue_comments" in scope:
                 comments = fetch_comments(session, (repo_owner, repo_name), issue["number"])
                 for comment in comments:
-                    for label in check_rules(rules, comment["body"]):
-                        no_rule_matched = False
-                        if label not in current_labels:
-                            labels.add(label)
+                    match, missing_labels = check_rules(rules, comment["body"], current_labels)
+                    [labels.add(label) for label in missing_labels]
+                    no_rule_matched = no_rule_matched or match
 
             # fallback label
             if no_rule_matched:
@@ -139,6 +194,11 @@ def main(config, repo, scope, rules, interval, label):
         # wait for <interval> seconds
         time.sleep(interval)
 
+@cli.command()
+def web():
+    """Run the web app"""
+    app.run(debug=True)
+
 if __name__ == '__main__':
     import sys
-    sys.exit(int(main() or 0))
+    sys.exit(int(cli() or 0))
