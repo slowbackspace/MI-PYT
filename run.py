@@ -38,7 +38,7 @@ def load_rules(rules):
 
 def get_scope(scope):
     if "all" in scope:
-        scope = ["issue_body", "issue_comments, pull_requests"]
+        scope = ["issue_body", "issue_comments", "pull_requests"]
 
     return scope
 
