@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import configparser
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -16,7 +18,25 @@ import yaml
 app = Flask(__name__)
 port = int(os.getenv("PORT", 5000))
 debug = True if os.getenv("DEBUG", "") == "true" else False
-CONFIG = {}
+CONFIG = {"webhook_token": os.getenv("webhook_token", "")}
+
+
+def validate_signature(headers, data, secret_key):
+    # http://eli.thegreenplace.net/2014/07/09/payload-server-in-python-3-for-github-webhooks
+    # https://github.com/jirutka/github-pr-closer/blob/master/app.py
+    try:
+        sha_name, signature = headers["X-Hub-Signature"].split("=", 1)
+    except (ValueError, AttributeError):
+        return False
+
+    if sha_name != "sha1":
+        return False
+
+    computed_digest = hmac.new(secret_key.encode("utf-8"),
+                               msg=data,
+                               digestmod=hashlib.sha1).hexdigest()
+
+    return hmac.compare_digest(computed_digest, signature)
 
 
 def get_session(token):
@@ -121,7 +141,11 @@ def hook():
     fallback_label = CONFIG["fallback_label"]
     session = CONFIG["session"]
 
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except Exception as e:
+        return abort(400)
+
     if not data:
         abort(501)
     if data.get("action", "") not in ["opened", "created", "edited"]:
@@ -129,6 +153,10 @@ def hook():
     issue = data.get("issue", None) or data.get("pull_request", None)
     if issue is None:
         return "Invalid requests", 400
+
+    # Validate request
+    if not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
+        abort(403)
 
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
     comment = data.get("comment", None)
