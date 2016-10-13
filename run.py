@@ -8,7 +8,7 @@ import re
 import time
 
 import requests
-from flask import Flask, abort, request
+from flask import Flask, abort, request, redirect
 
 import click
 import yaml
@@ -110,7 +110,8 @@ def add_labels(session, repo, issue, labels):
 
 @app.route('/')
 def hello_world():
-    return "Hello World! I am running on port {}".format(int(os.getenv("PORT")))
+    return redirect("http://slowbackspace.github.io/pygithub-labeler/")
+    # return "Hello World! I am running on port {}".format(int(os.getenv("PORT")))
 
 
 @app.route('/hook', methods=["POST"])

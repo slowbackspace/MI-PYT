@@ -1,7 +1,7 @@
 # pygithub-labeler
 Magically (and with the power of regular expressions) attach labels to your github repository issues.
 
-https://github.com/slowbackspace/pygithub-labeler/
+http://slowbackspace.github.io/pygithub-labeler/
 
 ```
 Usage: run.py [OPTIONS] COMMAND [ARGS]...
