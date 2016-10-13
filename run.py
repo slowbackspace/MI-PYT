@@ -113,7 +113,7 @@ def hello_world():
     return "Hello World! I am running on port {}".format(int(os.getenv("PORT")))
 
 
-@app.route('/hook', methods=['POST', "GET"])
+@app.route('/hook', methods=["POST"])
 def hook():
     scope = CONFIG["scope"]
     rules = CONFIG["rules"]
@@ -186,7 +186,10 @@ def cli(authconfig, repo, scope, rules, interval, label):
 def console():
     """Run the cli app"""
     session = CONFIG["session"]
-    scope, rules, interval, fallback_label = CONFIG["scope"], CONFIG["rules"], CONFIG["interval"], CONFIG["fallback_label"]
+    scope = CONFIG["scope"]
+    rules = CONFIG["rules"]
+    fallback_label = CONFIG["fallback_label"]
+    interval = CONFIG["interval"]
     repo_owner, repo_name = CONFIG["repo_owner"], CONFIG["repo_name"]
 
     while True:
@@ -234,7 +237,10 @@ def console():
                     labels.add(fallback_label)
 
             # add labels to the issue
-            res_json = add_labels(session, (repo_owner, repo_name), issue["number"], labels)
+            try:
+                add_labels(session, (repo_owner, repo_name), issue["number"], labels)
+            except Exception as e:
+                print(e)
 
         # wait for <interval> seconds
         time.sleep(interval)
