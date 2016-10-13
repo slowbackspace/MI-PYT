@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import configparser
@@ -6,6 +5,7 @@ import time
 import json
 import re
 import yaml
+import os
 
 import requests
 
@@ -13,8 +13,10 @@ import click
 
 from flask import Flask, request, abort
 
-CONFIG = {}
 app = Flask(__name__)
+port = int(os.getenv("PORT", 5000))
+debug = True if os.getenv("DEBUG", "") == "true" else False
+CONFIG = {}
 
 def get_session(token):
     session = requests.Session()
@@ -89,39 +91,45 @@ def add_labels(session, repo, issue, labels):
 
 @app.route('/')
 def hello_world():
-    return 'Hello World! I am running on port ' + int(os.getenv("PORT"))
+    return "Hello World! I am running on port {}".format(int(os.getenv("PORT")))
 
 @app.route('/hook', methods=['POST', "GET"])
 def hook():
-    scope, rules, label = CONFIG["scope"], CONFIG["rules"], CONFIG["fallback_label"]
+    scope = CONFIG["scope"]
+    rules = CONFIG["rules"]
+    fallback_label = CONFIG["fallback_label"]
+    session = CONFIG["session"]
+
     data = request.get_json()
     if not data:
+        abort(501)
+    if data.get("action", "") not in ["opened", "created", "edited"]:
         abort(501)
     issue = data.get("issue", None) or data.get("pull_request", None)
     if issue is None:
         return "Invalid requests", 200
 
-    repo_owner, repo_name = issue.get("repository", {}).get("full_name")
-    comment = issue.get("comment", None)
-    current_labels = issue.get("labels")
+    repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
+    comment = data.get("comment", None)
+    current_labels = issue.get("labels", [])
     labels = set()
     no_rule_matched = True
 
     # skip PR if they aren't in the scope
-    if issue.get("pull_request", None) and "pull_requests" not in scope:
+    if data.get("pull_request", None) and "pull_requests" not in scope:
         return "PR not in scope", 200
 
     # aply rules to issues's body if it's in the scope
     if "issue_body" in scope:
         match, missing_labels = check_rules(rules, issue["body"], current_labels)
         [labels.add(label) for label in missing_labels]
-        no_rule_matched = no_rule_matched or match
+        no_rule_matched = False if match else no_rule_matched
 
     # check comments if needed
     if "issue_comments" in scope and comment is not None:
         match, missing_labels = check_rules(rules, comment["body"], current_labels)
         [labels.add(label) for label in missing_labels]
-        no_rule_matched = no_rule_matched or match
+        no_rule_matched = False if match else no_rule_matched
 
     # fallback label
     if no_rule_matched:
@@ -179,7 +187,7 @@ def console():
             if "issue_body" in scope:
                 match, missing_labels = check_rules(rules, issue["body"], current_labels)
                 [labels.add(label) for label in missing_labels]
-                no_rule_matched = no_rule_matched or match
+                no_rule_matched = False if match else no_rule_matched
 
             # check comments if needed
             if "issue_comments" in scope:
@@ -187,7 +195,7 @@ def console():
                 for comment in comments:
                     match, missing_labels = check_rules(rules, comment["body"], current_labels)
                     [labels.add(label) for label in missing_labels]
-                    no_rule_matched = no_rule_matched or match
+                    no_rule_matched = False if match else no_rule_matched
 
             # fallback label
             if no_rule_matched:
@@ -203,7 +211,7 @@ def console():
 @cli.command()
 def web():
     """Run the web app"""
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=debug, port=port)
 
 if __name__ == '__main__':
     import sys
