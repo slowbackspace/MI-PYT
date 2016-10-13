@@ -1,0 +1,10 @@
+---
+applications:
+- name: labeler
+  memory: 128MB
+  disk_quota: 256M
+  random-route: false
+  buildpack: python_buildpack
+  command: python3 run.py web
+  env:
+    DEBUG: false
