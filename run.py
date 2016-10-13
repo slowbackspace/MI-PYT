@@ -160,7 +160,7 @@ def hook():
 
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
     comment = data.get("comment", None)
-    current_labels = issue.get("labels", [])
+    current_labels = [label["name"] for label in issue.get("labels", [])]
     labels = set()
     no_rule_matched = True
 
