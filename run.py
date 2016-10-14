@@ -99,15 +99,20 @@ def fetch_comments(session, repo, issue):
     return r.json()
 
 
-def check_rules(rules, text, current_labels=[]):
+def check_rules(rules, text_list, current_labels, fallback_label):
     labels = set()
     match = False
     for rule in rules:
-        result = re.search(rule["pattern"], text)
-        if result is not None:
-            match = True
-            if rule["label"] not in current_labels:
-                labels.add(rule["label"])
+        for text in text_list:
+            result = re.search(rule["pattern"], text)
+            if result is not None:
+                match = True
+                if rule["label"] not in current_labels:
+                    labels.add(rule["label"])
+    # fallback label
+    if not match:
+        if fallback_label not in current_labels:
+            labels.add(fallback_label)
     return match, labels
 
 
@@ -163,31 +168,23 @@ def hook():
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
     comment = data.get("comment", None)
     current_labels = [label["name"] for label in issue.get("labels", [])]
-    labels = set()
-    no_rule_matched = True
-
+    searched_content = []
     # skip PR if they aren't in the scope
     if data.get("pull_request", None) and "pull_requests" not in scope:
         return "PR not in scope", 400
 
     # aply rules to issues's body if it's in the scope
     if "issue_body" in scope:
-        match, missing_labels = check_rules(rules, issue["body"], current_labels)
-        [labels.add(label) for label in missing_labels]
-        no_rule_matched = False if match else no_rule_matched
+        searched_content.append(issue["body"])
 
     # check comments if needed
     if "issue_comments" in scope and comment is not None:
-        match, missing_labels = check_rules(rules, comment["body"], current_labels)
-        [labels.add(label) for label in missing_labels]
-        no_rule_matched = False if match else no_rule_matched
+        searched_content.append(comment["body"])
 
-    # fallback label
-    if no_rule_matched:
-        if fallback_label not in current_labels:
-            labels.add(fallback_label)
+    match, missing_labels = check_rules(rules, searched_content,
+                                        current_labels, fallback_label)
 
-    add_labels(session, (repo_owner, repo_name), issue["number"], labels)
+    add_labels(session, (repo_owner, repo_name), issue["number"], missing_labels)
     return "Added labels: {}".format(labels), 200
 
 
@@ -231,10 +228,7 @@ def console():
         # fetch comments if needed
         # apply rules and add missing labels
         for issue in issues:
-            labels = set()
-            no_rule_matched = True
-            current_labels = [label["name"] for label in issue["labels"]]
-
+            searched_content = []
             # skip PR if they aren't in the scope
             if issue.get("pull_request", None) and "pull_requests" not in scope:
                 continue
@@ -244,32 +238,29 @@ def console():
                 issue["title"], repo_name)
             )
 
+            current_labels = [label["name"] for label in issue["labels"]]
+
             # aply rules to issues's body if it's in the scope
             if "issue_body" in scope:
-                match, missing_labels = check_rules(rules, issue["body"], current_labels)
-                [labels.add(label) for label in missing_labels]
-                no_rule_matched = False if match else no_rule_matched
+                searched_content.append(issue["body"])
 
             # check comments if needed
             if "issue_comments" in scope:
                 comments = fetch_comments(
                     session, (repo_owner, repo_name), issue["number"]
                 )
-                for comment in comments:
-                    match, missing_labels = check_rules(
-                        rules, comment["body"], current_labels
-                    )
-                    [labels.add(label) for label in missing_labels]
-                    no_rule_matched = False if match else no_rule_matched
+                [searched_content.append(comment["body"]) for comment in comments]
 
-            # fallback label
-            if no_rule_matched:
-                if fallback_label not in current_labels:
-                    labels.add(fallback_label)
-
+            match, missing_labels = check_rules(rules, searched_content,
+                                                current_labels, fallback_label)
             # add labels to the issue
             try:
-                add_labels(session, (repo_owner, repo_name), issue["number"], labels)
+                add_labels(
+                    session,
+                    (repo_owner, repo_name),
+                    issue["number"],
+                    missing_labels
+                )
             except Exception as e:
                 print(e)
 
