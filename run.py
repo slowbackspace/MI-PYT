@@ -25,7 +25,7 @@ def validate_signature(headers, data, secret_key):
     # https://github.com/jirutka/github-pr-closer/blob/master/app.py
     try:
         sha_name, signature = headers["X-Hub-Signature"].split("=", 1)
-    except (ValueError, AttributeError):
+    except Exception as e:
         return False
 
     if sha_name != "sha1":
@@ -178,8 +178,9 @@ def hook():
         return "Invalid requests", 400
 
     # Validate request
-    if not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
-        abort(403)
+    if not debug:
+        if not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
+            abort(403)
 
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
     comment = data.get("comment", None)
