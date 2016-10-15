@@ -15,11 +15,10 @@ from flask import Flask, abort, request, redirect, render_template
 import click
 import yaml
 
-app = Flask(__name__)
 port = int(os.getenv("PORT", 5000))
 debug = True if os.getenv("DEBUG", "") == "true" else False
 CONFIG = {"webhook_token": os.getenv("webhook_token", "")}
-
+app = Flask(__name__)
 
 def validate_signature(headers, data, secret_key):
     # http://eli.thegreenplace.net/2014/07/09/payload-server-in-python-3-for-github-webhooks
@@ -132,6 +131,22 @@ def add_labels(session, repo, issue, labels):
     r.raise_for_status
     return r.json()
 
+def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
+                        scope=["all"], rules="rules.yml", interval=10,
+                        fallback_label="wontfix"):
+    auth_cfg = load_authconfig(authconfig)
+    token = auth_cfg['github']['token']
+    CONFIG.update({
+        "token": token,
+        "repo_owner": get_repo(repo)[0],
+        "repo_name": get_repo(repo)[1],
+        "rules": load_rules(rules),
+        "interval": get_interval(interval),
+        "fallback_label": get_fallback_label(fallback_label),
+        "scope": get_scope(scope),
+        "session": get_session(token)
+        })
+
 
 @app.route('/')
 def index():
@@ -141,12 +156,13 @@ def index():
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
-    if request.method == "GET":
-        return render_template("help.html")
     scope = CONFIG["scope"]
     rules = CONFIG["rules"]
     fallback_label = CONFIG["fallback_label"]
     session = CONFIG["session"]
+
+    if request.method == "GET":
+        return render_template("help.html")
 
     try:
         data = request.get_json()
@@ -185,7 +201,7 @@ def hook():
                                         current_labels, fallback_label)
 
     add_labels(session, (repo_owner, repo_name), issue["number"], missing_labels)
-    return "Added labels: {}".format(labels), 200
+    return "Added labels: {}".format(missing_labels), 200
 
 
 @click.group()
@@ -196,18 +212,7 @@ def hook():
 @click.option('--interval', default=5, help='Interval [seconds]. Default 5')
 @click.option('--label', default='wontfix', help='Fallback label. Default wonfix.')
 def cli(authconfig, repo, scope, rules, interval, label):
-    auth_cfg = load_authconfig(authconfig)
-    token = auth_cfg['github']['token']
-    CONFIG.update({
-        "token": token,
-        "repo_owner": get_repo(repo)[0],
-        "repo_name": get_repo(repo)[1],
-        "rules": load_rules(rules),
-        "interval": get_interval(interval),
-        "fallback_label": get_fallback_label(label),
-        "scope": get_scope(scope),
-        "session": get_session(token)
-        })
+    load_configuration(authconfig, repo, scope, rules, interval, label)
 
 
 @cli.command()
@@ -272,6 +277,9 @@ def console():
 def web():
     """Run the web app"""
     app.run(host="0.0.0.0", debug=debug, port=port)
+
+
+load_configuration()
 
 if __name__ == '__main__':
     import sys
