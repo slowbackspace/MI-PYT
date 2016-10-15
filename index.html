@@ -35,6 +35,28 @@
 
 <p><a href="http://slowbackspace.github.io/pygithub-labeler/">http://slowbackspace.github.io/pygithub-labeler/</a></p>
 
+<p><strong>Webhook Setup:</strong><br>
+Github</p>
+
+<ul>
+<li>Go to you repository's settings -&gt; Webhooks -&gt; Add webhook<br>
+</li>
+<li>In the Payload URL field, write your-domain/hook</li>
+<li>Select Content Type application/json</li>
+<li>In the Secret field, write a secure random string</li>
+<li>Select events that will trigger this webhook. pygithub-labeler supports Issues, Issue comment and Pull request events.</li>
+<li>Click on "Add webhook"</li>
+</ul>
+
+<p>pygithub-labeler</p>
+
+<ul>
+<li>Put your secret string into the env variable called "webhook_token"</li>
+<li>Start a web server via <code>python3 run.py web</code> or <code>./start_gunicorn.sh</code> </li>
+</ul>
+
+<p>For more information about webhooks visit <a href="https://developer.github.com/webhooks/"></a><a href="https://developer.github.com/webhooks/">https://developer.github.com/webhooks/</a><br></p>
+
 <p><strong>Env variables:</strong><br>
 PORT - port of the web server<br>
 DEBUG - Enable/disable debug mode (true/false)<br>
