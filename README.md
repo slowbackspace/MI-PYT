@@ -3,12 +3,9 @@ Magically (and with the power of regular expressions) attach labels to your gith
 
 http://slowbackspace.github.io/pygithub-labeler/
 
-Env variables:
-
-PORT - port of the web server
-
-DEBUG - Enable/disable debug mode (true/false)
-
+**Env variables:**  
+PORT - port of the web server  
+DEBUG - Enable/disable debug mode (true/false)  
 webhook_token - Secret token for a webhook
 
 ```
