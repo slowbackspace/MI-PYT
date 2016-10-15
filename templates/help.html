@@ -6,6 +6,54 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 	</head>
 	<body>
-		You are doing it wrong. <a href="http://slowbackspace.github.io/pygithub-labeler/">http://slowbackspace.github.io/pygithub-labeler/</a>
+		<!--You are doing it wrong. <a href="http://slowbackspace.github.io/pygithub-labeler/">http://slowbackspace.github.io/pygithub-labeler/</a>-->
+		
+		<h1><a id="pygithub-labeler" class="anchor" href="#pygithub-labeler" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>pygithub-labeler</h1>
+		<p>Magically (and with the power of regular expressions) attach labels to your github repository issues.</p>
+
+		<p><a href="http://slowbackspace.github.io/pygithub-labeler/">http://slowbackspace.github.io/pygithub-labeler/</a></p>
+
+		<p>
+			<strong>**Webhook Setup:**</strong><br>
+			Github
+			<ul>
+			<li>Go to you repository's settings -> Webhooks -> Add webhook</li>
+			<li>In the Payload URL field, write your-domain/hook</li>
+			<li>Select Content Type application/json</li>
+			<li>In the Secret field, write a secure random string</li>
+			<li>Select events that will trigger this webhook. pygithub-labeler supports Issues, Issue comment and Pull request events.</li>
+			<li>Click on "Add webhook"</li>
+			</ul>
+			pygithub-labeler
+			<ul>
+			<li>Put your secret string into the env variable called "webhook_token"</li>
+			<li>Start a web server via python3 run.py web or ./start_gunicorn.sh </li>
+			</ul>
+			For more information about webhooks visit <a href="https://developer.github.com/webhooks/">https://developer.github.com/webhooks/</a><br>
+		</p>
+
+		<p><strong>Env variables:</strong><br>
+		PORT - port of the web server<br>
+		DEBUG - Enable/disable debug mode (true/false)<br>
+		webhook_token - Secret token for a webhook</p>
+		<pre>
+		<code>
+Usage: run.py [OPTIONS] COMMAND [ARGS]...
+Options:
+--authconfig TEXT   Configuration file. Default auth.cfg
+--repo TEXT         Repository in 'owner/name' format. Default
+					slowbackspace/testrepo
+--scope TEXT        Scope - issue_body, issue_comments, pull_requests, all.
+					Default all
+--rules TEXT        Rules configuration file
+--interval INTEGER  Interval [seconds]. Default 5
+--label TEXT        Fallback label. Default wonfix
+--help              Show this message and exit
+
+Commands:
+console  Run the cli app
+web      Run the web app
+		</code>
+		</pre>
 	</body>
 </html>
