@@ -4,6 +4,8 @@ Magically (and with the power of regular expressions) attach labels to your gith
 http://slowbackspace.github.io/pygithub-labeler/
 
 **Webhook Setup:**  
+Webhooks allow you to build or set up integrations which subscribe to certain events on GitHub.com. When one of those events is triggered, Github will send a HTTP POST payload to the webhook's configured URL.
+
 Github
 - Go to you repository's settings -> Webhooks -> Add webhook  
 - In the Payload URL field, write your-domain/hook
