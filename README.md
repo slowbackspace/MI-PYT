@@ -3,6 +3,14 @@ Magically (and with the power of regular expressions) attach labels to your gith
 
 http://slowbackspace.github.io/pygithub-labeler/
 
+Env variables:
+
+PORT - port of the web server
+
+DEBUG - Enable/disable debug mode (true/false)
+
+webhook_token - Secret token for a webhook
+
 ```
 Usage: run.py [OPTIONS] COMMAND [ARGS]...
 
@@ -21,8 +29,3 @@ Commands:
   console  Run the cli app
   web      Run the web app
 ```
-
-## Web
-Live preview: http://labeler.cftest.homeatcloud.cz
-
-Github webhook: http://labeler.cftest.homeatcloud.cz/hook
