@@ -20,6 +20,7 @@ debug = True if os.getenv("DEBUG", "") == "true" else False
 CONFIG = {"webhook_token": os.getenv("webhook_token", "")}
 app = Flask(__name__)
 
+
 def validate_signature(headers, data, secret_key):
     # http://eli.thegreenplace.net/2014/07/09/payload-server-in-python-3-for-github-webhooks
     # https://github.com/jirutka/github-pr-closer/blob/master/app.py
@@ -179,7 +180,9 @@ def hook():
 
     # Validate request
     if not debug:
-        if not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
+        if CONFIG["webhook_token"] == "":
+            print("Missing webhook_token env variable. Webhook endpoint not secured.")
+        elif not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
             abort(403)
 
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
