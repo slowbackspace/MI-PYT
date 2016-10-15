@@ -5,6 +5,6 @@ applications:
   disk_quota: 256M
   random-route: false
   buildpack: python_buildpack
-  command: python3 run.py web
+  command: ./start_gunicorn.sh
   env:
     DEBUG: false
