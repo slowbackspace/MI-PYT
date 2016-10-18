@@ -157,6 +157,7 @@ def index():
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
+    load_configuration()
     scope = CONFIG["scope"]
     rules = CONFIG["rules"]
     fallback_label = CONFIG["fallback_label"]
@@ -282,8 +283,6 @@ def web():
     """Run the web app"""
     app.run(host="0.0.0.0", debug=debug, port=port)
 
-
-load_configuration()
 
 if __name__ == '__main__':
     import sys
