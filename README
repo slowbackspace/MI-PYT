@@ -1,10 +1,6 @@
 # pygithub-labeler
 Magically (and with the power of regular expressions) attach labels to your github repository issues.
 
-
-## Available now on (test)PyPIna
-`pip install -i https://testpypi.python.org/pypi --extra-index-url https://pypi.python.org/pypi/ pygithublabeler`
-
 http://slowbackspace.github.io/pygithub-labeler/
 
 **Webhook Setup:**  

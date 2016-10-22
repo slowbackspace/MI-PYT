@@ -8,6 +8,7 @@ import json
 import os
 import re
 import time
+import sys
 
 import requests
 from flask import Flask, abort, request, redirect, render_template
@@ -18,6 +19,7 @@ import yaml
 port = int(os.getenv("PORT", 5000))
 debug = True if os.getenv("DEBUG", "") == "true" else False
 CONFIG = {"webhook_token": os.getenv("webhook_token", "")}
+ROOT_DIRECTORY = os.path.realpath(__file__)
 app = Flask(__name__)
 
 
@@ -51,7 +53,7 @@ def get_session(token):
 def load_authconfig(file):
     config = configparser.ConfigParser()
     if len(config.read(file)) == 0:
-        raise IOError("Could not read config file.")
+        raise IOError("Could not read config file {}.".format(file))
     return config
 
 
@@ -132,16 +134,26 @@ def add_labels(session, repo, issue, labels):
     r.raise_for_status
     return r.json()
 
+
 def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
                         scope=["all"], rules="rules.yml", interval=10,
                         fallback_label="wontfix"):
-    auth_cfg = load_authconfig(authconfig)
-    token = auth_cfg['github']['token']
+    try:
+        auth_cfg = load_authconfig(authconfig)
+        token = auth_cfg['github']['token']
+    except Exception as e:
+        sys.exit("Unable to read auth configuration from '{}'".format(authconfig))
+    
+    try:
+        rules = load_rules(rules)
+    except Exception as e:
+        sys.exit("Unable to read rules configuration from '{}'".format(rules))
+
     CONFIG.update({
         "token": token,
         "repo_owner": get_repo(repo)[0],
         "repo_name": get_repo(repo)[1],
-        "rules": load_rules(rules),
+        "rules": rules,
         "interval": get_interval(interval),
         "fallback_label": get_fallback_label(fallback_label),
         "scope": get_scope(scope),
@@ -157,7 +169,8 @@ def index():
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
-    load_configuration()
+    if not CONFIG.get("scope", None):
+        load_configuration()
     scope = CONFIG["scope"]
     rules = CONFIG["rules"]
     fallback_label = CONFIG["fallback_label"]
