@@ -30,6 +30,13 @@ with betamax.Betamax.configure() as config:
 
 
 @pytest.fixture
+def testapp():
+    pygithublabeler.app.config['TESTING'] = True
+    pygithublabeler.app.config['scope'] = ["all"]
+    return pygithublabeler.app.test_client()
+
+
+@pytest.fixture
 def testapp_with_session(betamax_session, tmpdir):
     content = """[github]
             token = {}
