@@ -42,7 +42,8 @@ def test_fetch_comments(betamax_session):
 
 def test_add_labels(betamax_session):
     session = pygithublabeler.get_session(TOKEN, betamax_session)
-    res = pygithublabeler.add_labels(session, ("slowbackspace", "testrepo"), 
+    labels = pygithublabeler.add_labels(session, ("slowbackspace", "testrepo"), 
                                16, ["question"])
 
-    assert res[0]["name"] == "question"
+    assert "question" in [label["name"] for label in labels]
+
