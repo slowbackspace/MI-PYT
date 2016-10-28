@@ -4,6 +4,8 @@ with open('README') as f:
     long_description = ''.join(f.readlines())
 
 setup(
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest', 'betamax'],
     name='pygithublabeler',
     version='0.2.0',
     description='Magically (and with the power of regular expressions) attach labels to your github repository issues.',
@@ -14,7 +16,6 @@ setup(
     license='MIT',
     url='https://github.com/slowbackspace/pygithub-labeler',
     packages=find_packages(),
-    #include_package_data=False,
     package_data={'pygithublabeler': ['rules.yml', "templates/*.html"]},
     install_requires=['Flask', 'click>=6', 'PyYAML', 'requests'],
     entry_points={

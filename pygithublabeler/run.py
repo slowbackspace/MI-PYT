@@ -41,8 +41,8 @@ def validate_signature(headers, data, secret_key):
     return hmac.compare_digest(computed_digest, signature)
 
 
-def get_session(token):
-    session = requests.Session()
+def get_session(token, custom_session=None):
+    session = custom_session or requests.Session()
     session.headers = {
         "Authorization": "token " + token,
         "User-Agent": "testapp"
@@ -50,11 +50,13 @@ def get_session(token):
     return session
 
 
-def load_authconfig(file):
+def load_authtoken(filename):
     config = configparser.ConfigParser()
-    if len(config.read(file)) == 0:
-        raise IOError("Could not read config file {}.".format(file))
-    return config
+    if len(config.read(filename)) == 0:
+        raise IOError("Could not read config file {}.".format(filename))
+
+    token = config['github']['token']
+    return token
 
 
 def get_repo(repo):
@@ -139,8 +141,7 @@ def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
                         scope=["all"], rules="rules.yml", interval=10,
                         fallback_label="wontfix"):
     try:
-        auth_cfg = load_authconfig(authconfig)
-        token = auth_cfg['github']['token']
+        token = load_authtoken(authconfig)
     except Exception as e:
         sys.exit("Unable to read auth configuration from '{}'".format(authconfig))
     
