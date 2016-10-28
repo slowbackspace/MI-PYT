@@ -18,9 +18,9 @@ import yaml
 
 port = int(os.getenv("PORT", 5000))
 debug = True if os.getenv("DEBUG", "") == "true" else False
-CONFIG = {"webhook_token": os.getenv("webhook_token", "")}
 ROOT_DIRECTORY = os.path.realpath(__file__)
 app = Flask(__name__)
+app.config.update({"webhook_token": os.getenv("webhook_token", "")})
 
 
 def validate_signature(headers, data, secret_key):
@@ -129,10 +129,9 @@ def add_labels(session, repo, issue, labels):
 
     print("Adding labels: {} to {}/{} on issue {}".format(labels, repo[0], repo[1], issue))
     repo_owner, repo_name = repo
-    r = session.post("https://api.github.com/repos/{}/{}/issues/{}/labels".format(
-        repo_owner, repo_name, issue),
-        data=labels
-    )
+    url = "https://api.github.com/repos/{}/{}/issues/{}/labels".format(
+                                                repo_owner, repo_name, issue)
+    r = session.post(url, data=labels)
     r.raise_for_status
     return r.json()
 
@@ -150,7 +149,7 @@ def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
     except Exception as e:
         sys.exit("Unable to read rules configuration from '{}'".format(rules))
 
-    CONFIG.update({
+    app.config.update({
         "token": token,
         "repo_owner": get_repo(repo)[0],
         "repo_name": get_repo(repo)[1],
@@ -158,7 +157,7 @@ def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
         "interval": get_interval(interval),
         "fallback_label": get_fallback_label(fallback_label),
         "scope": get_scope(scope),
-        "session": get_session(token)
+        "session": app.config.get("session", None) or get_session(token)
         })
 
 
@@ -170,12 +169,12 @@ def index():
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
-    if not CONFIG.get("scope", None):
+    if not app.config.get("scope", None):
         load_configuration()
-    scope = CONFIG["scope"]
-    rules = CONFIG["rules"]
-    fallback_label = CONFIG["fallback_label"]
-    session = CONFIG["session"]
+    scope = app.config["scope"]
+    rules = app.config["rules"]
+    fallback_label = app.config["fallback_label"]
+    session = app.config["session"] or session
 
     if request.method == "GET":
         return render_template("help.html")
@@ -186,19 +185,19 @@ def hook():
         return abort(400)
 
     if not data:
-        abort(501)
+        return "Invalid data", 400
     if data.get("action", "") not in ["opened", "created", "edited"]:
-        abort(501)
+        return "Invalid action", 501
     issue = data.get("issue", None) or data.get("pull_request", None)
     if issue is None:
         return "Invalid requests", 400
 
     # Validate request
     if not debug:
-        if CONFIG["webhook_token"] == "":
+        if app.config["webhook_token"] == "":
             print("Missing webhook_token env variable. Webhook endpoint not secured.")
-        elif not validate_signature(request.headers, request.data, CONFIG["webhook_token"]):
-            abort(403)
+        elif not validate_signature(request.headers, request.data, app.config["webhook_token"]):
+            return "Invalid signature", 403
 
     repo_owner, repo_name = get_repo(data.get("repository", {}).get("full_name"))
     comment = data.get("comment", None)
@@ -219,7 +218,7 @@ def hook():
     match, missing_labels = check_rules(rules, searched_content,
                                         current_labels, fallback_label)
 
-    add_labels(session, (repo_owner, repo_name), issue["number"], missing_labels)
+    res = add_labels(session, (repo_owner, repo_name), issue["number"], missing_labels)
     return "Added labels: {}".format(missing_labels), 200
 
 
@@ -237,12 +236,12 @@ def cli(authconfig, repo, scope, rules, interval, label):
 @cli.command()
 def console():
     """Run the cli app"""
-    session = CONFIG["session"]
-    scope = CONFIG["scope"]
-    rules = CONFIG["rules"]
-    fallback_label = CONFIG["fallback_label"]
-    interval = CONFIG["interval"]
-    repo_owner, repo_name = CONFIG["repo_owner"], CONFIG["repo_name"]
+    session = app.config["session"]
+    scope = app.config["scope"]
+    rules = app.config["rules"]
+    fallback_label = app.config["fallback_label"]
+    interval = app.config["interval"]
+    repo_owner, repo_name = app.config["repo_owner"], app.config["repo_name"]
 
     while True:
         # fetch issues
