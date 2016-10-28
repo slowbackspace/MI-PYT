@@ -30,12 +30,6 @@ with betamax.Betamax.configure() as config:
 
 
 @pytest.fixture
-def testapp():
-    pygithublabeler.app.config['TESTING'] = True
-    return pygithublabeler.app.test_client()
-
-
-@pytest.fixture
 def testapp_with_session(betamax_session, tmpdir):
     content = """[github]
             token = {}
@@ -91,21 +85,21 @@ def test_hook_get(testapp):
     assert 'pygithub-labeler' in testapp.get('/hook').data.decode('utf-8')
 
 
-def test_hook_post(testapp, betamax_session):
+def test_hook_post(testapp_with_session, betamax_session):
     # without data
-    r = testapp.post('/hook')
+    r = testapp_with_session.post('/hook')
     res_content = r.data.decode('utf-8')
     assert r.status_code == 400 and "Invalid data" in res_content
 
     # invalid action
     data = {"action": "invalid_action"}
-    r = testapp.post('/hook', data=json.dumps(data), content_type="application/json")
+    r = testapp_with_session.post('/hook', data=json.dumps(data), content_type="application/json")
     res_content = r.data.decode('utf-8')
     assert r.status_code == 501 and "Invalid action" in res_content
 
     # without issue
     data = {"action": "opened"}
-    r = testapp.post('/hook', data=json.dumps(data), content_type="application/json")
+    r = testapp_with_session.post('/hook', data=json.dumps(data), content_type="application/json")
     res_content = r.data.decode('utf-8')
     assert r.status_code == 400 and "Invalid requests" in res_content
 
