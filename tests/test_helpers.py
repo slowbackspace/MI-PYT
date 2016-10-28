@@ -5,15 +5,6 @@ import os
 import pytest
 import pygithublabeler.run as pygithublabeler
 
-@pytest.fixture
-def testapp():
-    pygithublabeler.app.config['TESTING'] = True
-    return pygithublabeler.app.test_client()
-
-
-def test_index(testapp):
-    assert 'pygithub-labeler' in testapp.get('/').data.decode('utf-8')
-
 
 def test_validate_signature():
     result = pygithublabeler.validate_signature(
