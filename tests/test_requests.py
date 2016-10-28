@@ -8,7 +8,8 @@ import betamax
 import pygithublabeler.run as pygithublabeler
 
 TEST_REPOSITORY = ("slowbackspace", "testrepo")
-TEST_ISSUE = 16
+TEST_REPO_FULL = "{}/{}".format(TEST_REPOSITORY[0], TEST_REPOSITORY[1])
+TEST_ISSUE = 20
 
 with betamax.Betamax.configure() as config:
     # tell Betamax where to find the cassettes
@@ -35,9 +36,28 @@ def testapp():
 
 
 @pytest.fixture
-def testapp_with_session(betamax_session):
+def testapp_with_session(betamax_session, tmpdir):
+    content = """[github]
+            token = {}
+            """.format(TOKEN)
+    authcfg = tmpdir.join("auth.txt")
+    authcfg.write(content)
+
+    content = (
+    "- pattern: .*robot:bug.*\n"
+    "  label: bug\n"
+    "- pattern: .*robot:question.*\n"
+    "  label: question\n")
+
+    rulescfg = tmpdir.join("rules.txt")
+    rulescfg.write(content)
+
     pygithublabeler.app.config['TESTING'] = True
-    pygithublabeler.app.config['session'] = betamax_session
+    pygithublabeler.load_configuration(authconfig=str(authcfg),
+                                        repo=TEST_REPO_FULL,
+                                        rules=str(rulescfg))
+    session = pygithublabeler.get_session(TOKEN, betamax_session)
+    pygithublabeler.app.config['session'] = session
     return pygithublabeler.app.test_client()
 
 
@@ -71,7 +91,7 @@ def test_hook_get(testapp):
     assert 'pygithub-labeler' in testapp.get('/hook').data.decode('utf-8')
 
 
-def test_hook_post(testapp, testapp_with_session, betamax_session):
+def test_hook_post(testapp, betamax_session):
     # without data
     r = testapp.post('/hook')
     res_content = r.data.decode('utf-8')
@@ -89,8 +109,9 @@ def test_hook_post(testapp, testapp_with_session, betamax_session):
     res_content = r.data.decode('utf-8')
     assert r.status_code == 400 and "Invalid requests" in res_content
 
+
+def test_hook_post_fake_issue(testapp_with_session):
     # fake issue
-    repository_fullname = "{}/{}".format(TEST_REPOSITORY[0], TEST_REPOSITORY[1])
     data = {
         "action": "opened", 
         "issue": {
@@ -98,7 +119,7 @@ def test_hook_post(testapp, testapp_with_session, betamax_session):
             "labels": [],
             "body": "testovaci robot:bug text"
         },
-        "repository": {"full_name": repository_fullname}
+        "repository": {"full_name": TEST_REPO_FULL}
         }
     r = testapp_with_session.post('/hook', data=json.dumps(data), content_type="application/json")
     res_content = r.data.decode('utf-8')

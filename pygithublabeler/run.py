@@ -169,15 +169,15 @@ def index():
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
+    if request.method == "GET":
+        return render_template("help.html")
+
     if not app.config.get("scope", None):
         load_configuration()
     scope = app.config["scope"]
     rules = app.config["rules"]
     fallback_label = app.config["fallback_label"]
-    session = app.config["session"] or session
-
-    if request.method == "GET":
-        return render_template("help.html")
+    session = app.config["session"]
 
     try:
         data = request.get_json()
