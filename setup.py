@@ -7,7 +7,7 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'betamax'],
     name='pygithublabeler',
-    version='0.2.0',
+    version='0.4.0',
     description='Magically (and with the power of regular expressions) attach labels to your github repository issues.',
     long_description=long_description,
     author='Maros Spak',
