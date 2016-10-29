@@ -7,9 +7,9 @@ import pytest
 import betamax
 import pygithublabeler.run as pygithublabeler
 
-TEST_REPOSITORY = ("slowbackspace", "testrepo")
+TEST_REPOSITORY = ("slowbackspace", "testrepo")  # Repository in (owner, name) format
 TEST_REPO_FULL = "{}/{}".format(TEST_REPOSITORY[0], TEST_REPOSITORY[1])
-TEST_ISSUE = 20
+TEST_ISSUE = 20  # Issue's number in the repository
 
 with betamax.Betamax.configure() as config:
     # tell Betamax where to find the cassettes
