@@ -1,7 +1,19 @@
 # pygithub-labeler
 Magically (and with the power of regular expressions) attach labels to your github repository issues.
 
-## Installation
+### TODO
+- Upload the package on pypi
+
+### Building and testing documentation
+```
+sphinx-apidoc -f -o docs pygithublabeler
+cd docs
+export GITHUB_TOKEN=<secret>
+make doctest
+make html
+```
+
+### Installation
 `pip install -i https://testpypi.python.org/pypi --extra-index-url https://pypi.python.org/pypi/ pygithublabeler`
 
 **Running tests**
@@ -42,6 +54,7 @@ PORT - port of the web server
 DEBUG - Enable/disable debug mode (true/false)  
 webhook_token - Secret token for a webhook
 
+### CLI Usage
 ```
 Usage: run.py [OPTIONS] COMMAND [ARGS]...
 
