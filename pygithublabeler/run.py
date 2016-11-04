@@ -24,6 +24,18 @@ app.config.update({"webhook_token": os.getenv("webhook_token", "")})
 
 
 def validate_signature(headers, data, secret_key):
+    """Validate webhook request with a signature in X-Hub-Signature header
+    
+    More info at https://developer.github.com/webhooks/securing/ 
+    
+    Args:
+        headers (dict): Request's headers
+        data (str): Request's data
+        secret_key (str): Top secret webhook token
+    
+    Returns:
+        bool: True if signature is valid, False otherwise
+    """
     # http://eli.thegreenplace.net/2014/07/09/payload-server-in-python-3-for-github-webhooks
     # https://github.com/jirutka/github-pr-closer/blob/master/app.py
     try:
@@ -42,6 +54,15 @@ def validate_signature(headers, data, secret_key):
 
 
 def get_session(token, custom_session=None):
+    """Get requests session with authorization headers
+    
+    Args:
+        token (str): Top secret GitHub access token
+        custom_session: e.g. betamax's session
+    
+    Returns:
+        :class:`requests.sessions.Session`: Session 
+    """
     session = custom_session or requests.Session()
     session.headers = {
         "Authorization": "token " + token,
@@ -51,6 +72,14 @@ def get_session(token, custom_session=None):
 
 
 def load_authtoken(filename):
+    """Reads authorization token from a file.
+    
+    Args:
+        filename (str): path to the file
+    
+    Returns:
+        str: Top secret webhook token 
+    """
     config = configparser.ConfigParser()
     if len(config.read(filename)) == 0:
         raise IOError("Could not read config file {}.".format(filename))
@@ -59,26 +88,42 @@ def load_authtoken(filename):
     return token
 
 
-def get_repo(repo):
-    repo_owner, repo_name = repo.split("/")
-    return repo_owner, repo_name
-
-
-def get_interval(interval):
-    return interval
-
-
-def get_fallback_label(label):
-    return label
-
-
-def load_rules(rules):
-    with open(rules) as f:
+def load_rules(filename):
+    """Reads rules for labelling from a YAML file.
+    
+    Args:
+        filename (str): path to the file
+    
+    Returns:
+        list: list of rules or empty list if file failed to load 
+    """
+    with open(filename) as f:
         rules = yaml.safe_load(f)
         return rules or []
 
 
+def get_repo(repo):
+    """Parse owner and name of the repository from repository's fullname
+    
+    Args:
+        repo (str): Full name of the repository (owner/name format)
+    
+    Returns:
+        tuple: (owner, name)
+    """
+    repo_owner, repo_name = repo.split("/")
+    return repo_owner, repo_name
+
+
 def get_scope(scope):
+    """Get scope for the labeler
+    
+    Args:
+        scope (list): combination of issue_body, issue_comments, pull_requests or ["all"]
+    
+    Returns:
+        list: list of scopes
+    """
     if "all" in scope:
         scope = ["issue_body", "issue_comments", "pull_requests"]
 
@@ -86,6 +131,14 @@ def get_scope(scope):
 
 
 def fetch_issues(session, repo):
+    """Fetch list of issues for the repository
+    
+    Args:
+        session (Session): Request's session
+        repo (tuple): (repository_owner, repository_name) 
+    Returns:
+        dict: JSON Response
+    """
     repo_owner, repo_name = repo
     r = session.get("https://api.github.com/repos/{}/{}/issues".format(
         repo_owner, repo_name)
@@ -95,6 +148,15 @@ def fetch_issues(session, repo):
 
 
 def fetch_comments(session, repo, issue):
+    """Fetch issue's comments
+    
+    Args:
+        session (Session): Request's session
+        repo (tuple): (repository_owner, repository_name) 
+        issue (int): Issue's number
+    Returns:
+        dict: JSON Response
+    """
     repo_owner, repo_name = repo
     r = session.get("https://api.github.com/repos/{}/{}/issues/{}/comments".format(
         repo_owner, repo_name, issue)
@@ -104,6 +166,20 @@ def fetch_comments(session, repo, issue):
 
 
 def check_rules(rules, text_list, current_labels, fallback_label):
+    """Finds rule's match in a text and returns list of labels to attach.
+    If no rule matches returns False for match and fallback label will be attached.
+    
+    Args:
+        rules (list): List of rules
+        text_list (list): List of strings to search in
+        current_labels (list): List of already attached labels
+        fallback_label (str): Label to attach if no rule matches
+    Returns:
+        tuple: (match, labels)
+
+            match (bool): True if any rule matches, False otherwise
+            labels (list): List of labels to attach
+    """
     labels = set()
     match = False
     for rule in rules:
@@ -121,6 +197,16 @@ def check_rules(rules, text_list, current_labels, fallback_label):
 
 
 def add_labels(session, repo, issue, labels):
+    """Sends request to Github API to attach the labels to the issue
+
+    Args:
+        session (Session): Request's session
+        repo (tuple): (repository_owner, repository_name) 
+        issue (int): Issue's number
+        labels (list): List of labels to attach
+    Returns:
+        dict: JSON Response
+    """
     if len(labels) == 0:
         return False
 
@@ -139,6 +225,16 @@ def add_labels(session, repo, issue, labels):
 def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
                         scope=["all"], rules="rules.yml", interval=10,
                         fallback_label="wontfix"):
+    """Loads configuration and store it in app.config
+    
+    Args:
+        authconfig (str): Path to the authorization config
+        repo (tuple): (repository_owner, repository_name) 
+        scope (list): list of scopes
+        rules (str): Path to the rules config
+        interval (int): How often scan issues
+        fallback_label (str): Label that will be attached if no rule matches
+    """
     try:
         token = load_authtoken(authconfig)
     except Exception as e:
@@ -154,8 +250,8 @@ def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
         "repo_owner": get_repo(repo)[0],
         "repo_name": get_repo(repo)[1],
         "rules": rules,
-        "interval": get_interval(interval),
-        "fallback_label": get_fallback_label(fallback_label),
+        "interval": interval,
+        "fallback_label": fallback_label,
         "scope": get_scope(scope),
         "session": app.config.get("session", None) or get_session(token)
         })
@@ -163,12 +259,19 @@ def load_configuration(authconfig="auth.cfg", repo="slowbackspace/testrepo",
 
 @app.route('/')
 def index():
+    """ Index page """
     return render_template("help.html")
     # return "Hello World! I am running on port {}".format(int(os.getenv("PORT")))
 
 
 @app.route('/hook', methods=["POST", "GET"])
 def hook():
+    """Handler for the GitHub webhook
+    Supports 3 types of GitHub events - issues, issue comment, pull request.
+    Validates requests and verifies signature using :py:func:`validate_signature`.
+    Then text of the issue/comment 
+    Then it will find and add missing labels to the issue. 
+    """
     if request.method == "GET":
         return render_template("help.html")
 
@@ -219,7 +322,7 @@ def hook():
                                         current_labels, fallback_label)
 
     res = add_labels(session, (repo_owner, repo_name), issue["number"], missing_labels)
-    return "Added labels: {}".format(missing_labels), 200
+    return "{}".format(missing_labels), 200
 
 
 @click.group()
@@ -235,7 +338,9 @@ def cli(authconfig, repo, scope, rules, interval, label):
 
 @cli.command()
 def console():
-    """Run the cli app"""
+    """Run the cli app
+    Periodically fetches issues from the GitHub API and attaches missing labels.
+    """
     session = app.config["session"]
     scope = app.config["scope"]
     rules = app.config["rules"]
