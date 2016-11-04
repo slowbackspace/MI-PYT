@@ -3,5 +3,10 @@ python:
 - '3.5'
 install:
 - python setup.py install
+- pip install -r docs/requirements.txt
 script:
 - python setup.py test --addopts -v
+- cd docs && make doctest
+env:
+  matrix:
+    secure: Aqd5VeflBz9hUrCRwdb3W/ExvsV1JPhuWttq8ZMB+MVy83OEICqfa/mcbucnzgixLC1AOG77IZ2dLXw+2bwTc5keEwHlHu7/SfjZzZrOpUgvinvzZG2JlB9uZq3+NeJIL/ya/hYBiX++/RZ0w1XCjemCeOOOb4CdBfS0qAQymRmWppqCcMKwCs0/TAVbYTiLhC74Pr7RK8IExFtSSHyM6RPZ4nvN6gjfhcgArE+U+bsQJw+eyCZp9X2aelGjIx7jBr/Z2OrRGUIL0dA90ksG9DJ4eF3YsRd/rZSuQVJHxD8/Erod5i5PHSj2NmYhqDbSNXvlS49lkAOjJR/lydJv4wi45Y1hhWHfVr8uF1Ezh9bhj/Y1mjpXVLAGRsJZadAuEmmQA9+m169mW5s6MptU/OvDa9fju2BFTkwFECtqLxGZXmhXgGFQE1ysjYfXZrPDUqMdcoOiSEJpIt9STSRhvtlVP8bUHJENoSOlU0+N41Aqnu/1ncv9YpFhHEu5XXeGjK1a3qBUmNulYbS9aM/6Fj/lLKrGNE2xMM0/m935iqWKdunoyWHePIc+4uurTIByd7G4OnAW2K7h6nyYZhwQ45+qHmb+8rzebXAmzG1BefbyBPcf2ah1xuTPT9IMQdVq/yjBsFmgXbSY4d3zxtWQlwI5205tFIeHZOYQeewQaBc=
