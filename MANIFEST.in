@@ -2,3 +2,4 @@ include LICENSE
 include README.rst
 include tests/*
 include tests/fixtures/cassettes/*
+recursive-include docs *

@@ -1,9 +1,6 @@
 # pygithub-labeler
 Magically (and with the power of regular expressions) attach labels to your github repository issues.
 
-### TODO
-- Upload the package on pypi
-
 ### Building and testing documentation
 ```
 sphinx-apidoc -f -o docs pygithublabeler
